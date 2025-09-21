@@ -1,0 +1,102 @@
+// @version=5
+// Title: Final MACCI Strategy (Compatibility Version)
+// This version is rewritten to avoid the '=>' syntax error.
+indicator(" M3TF MACCI Strategy", "MACCI", overlay=true)
+
+// --- USER INPUTS ---
+g_indicator = "Indicator Settings"
+ma_type = input.string("SMA", "MA Type", options=["SMA", "EMA", "WMA"], group=g_indicator)
+cci_length = input.int(20, "CCI Length", minval=1, group=g_indicator)
+ma_length = input.int(10, "MA of CCI Length", minval=1, group=g_indicator)
+
+g_rules = "Strategy Rules & Timeframes"
+overbought_level = input.int(120, "Overbought Level (>)", group=g_rules)
+oversold_level = input.int(-120, "Oversold Level (<)", group=g_rules)
+tf1 = input.timeframe("1", "Timeframe 1", group=g_rules, inline="tf_row1")
+tf2 = input.timeframe("3", "Timeframe 2", group=g_rules, inline="tf_row1")
+tf3 = input.timeframe("5", "Timeframe 3", group=g_rules, inline="tf_row1")
+
+g_display = "Display Settings"
+show_dashboard = input.bool(true, "Show Dashboard", group=g_display)
+show_signals = input.bool(true, "Show Buy/Sell Signals", group=g_display, inline="sig_row1")
+show_bgcolor = input.bool(true, "Show Background Color", group=g_display, inline="sig_row1")
+long_color = input.color(color.new(color.green, 80), "Long Color", group=g_display, inline="clr_row1")
+short_color = input.color(color.new(color.red, 80), "Short Color", group=g_display, inline="clr_row1")
+
+// --- CORE CALCULATION & MULTI-TIMEFRAME LOGIC ---
+// The MACCI calculation is now directly inside the request.security calls to avoid '=>' functions.
+
+// Timeframe 1
+cci_val_1m = ta.cci(close, cci_length)
+macci_1m_base = switch ma_type
+    "SMA" => ta.sma(cci_val_1m, ma_length)
+    "EMA" => ta.ema(cci_val_1m, ma_length)
+    "WMA" => ta.wma(cci_val_1m, ma_length)
+macci_1m = request.security(syminfo.tickerid, tf1, macci_1m_base)
+
+// Timeframe 2
+cci_val_3m = ta.cci(close, cci_length)
+macci_3m_base = switch ma_type
+    "SMA" => ta.sma(cci_val_3m, ma_length)
+    "EMA" => ta.ema(cci_val_3m, ma_length)
+    "WMA" => ta.wma(cci_val_3m, ma_length)
+macci_3m = request.security(syminfo.tickerid, tf2, macci_3m_base)
+
+// Timeframe 3
+cci_val_5m = ta.cci(close, cci_length)
+macci_5m_base = switch ma_type
+    "SMA" => ta.sma(cci_val_5m, ma_length)
+    "EMA" => ta.ema(cci_val_5m, ma_length)
+    "WMA" => ta.wma(cci_val_5m, ma_length)
+macci_5m = request.security(syminfo.tickerid, tf3, macci_5m_base)
+
+// --- STRATEGY CONDITIONS ---
+is_long_signal = macci_1m < oversold_level and macci_3m < oversold_level and macci_5m < oversold_level
+is_short_signal = macci_1m > overbought_level and macci_3m > overbought_level and macci_5m > overbought_level
+
+// --- VISUAL SIGNALS ON CHART ---
+if show_signals
+    if is_long_signal and not is_long_signal[1]
+        label.new(bar_index, low, "LONG SIGNAL\nFind Strongest Stocks", color=long_color, textcolor=color.white, style=label.style_label_up, yloc=yloc.belowbar)
+
+    if is_short_signal and not is_short_signal[1]
+        label.new(bar_index, high, "SHORT SIGNAL\nFind Weakest Stocks", color=short_color, textcolor=color.white, style=label.style_label_down, yloc=yloc.abovebar)
+
+bgcolor(show_bgcolor and is_long_signal ? long_color : show_bgcolor and is_short_signal ? short_color : na, title="Signal Active")
+
+// --- STATUS DASHBOARD ---
+var table g_dashboard = table.new(position.top_right, 3, 4, border_width=1)
+
+if show_dashboard and barstate.islast
+    // -- Dashboard logic for Timeframe 1 --
+    cell_color_1m = macci_1m > overbought_level ? short_color : macci_1m < oversold_level ? long_color : color.new(color.gray, 50)
+    cell_text_1m = macci_1m > overbought_level ? "Short Zone" : macci_1m < oversold_level ? "Long Zone" : "Neutral"
+    table.cell(g_dashboard, 0, 1, tf1, bgcolor=cell_color_1m, text_color=color.white)
+    table.cell(g_dashboard, 1, 1, str.tostring(macci_1m, "0.0"), bgcolor=cell_color_1m, text_color=color.white)
+    table.cell(g_dashboard, 2, 1, cell_text_1m, bgcolor=cell_color_1m, text_color=color.white)
+
+    // -- Dashboard logic for Timeframe 2 --
+    cell_color_3m = macci_3m > overbought_level ? short_color : macci_3m < oversold_level ? long_color : color.new(color.gray, 50)
+    cell_text_3m = macci_3m > overbought_level ? "Short Zone" : macci_3m < oversold_level ? "Long Zone" : "Neutral"
+    table.cell(g_dashboard, 0, 2, tf2, bgcolor=cell_color_3m, text_color=color.white)
+    table.cell(g_dashboard, 1, 2, str.tostring(macci_3m, "0.0"), bgcolor=cell_color_3m, text_color=color.white)
+    table.cell(g_dashboard, 2, 2, cell_text_3m, bgcolor=cell_color_3m, text_color=color.white)
+
+    // -- Dashboard logic for Timeframe 3 --
+    cell_color_5m = macci_5m > overbought_level ? short_color : macci_5m < oversold_level ? long_color : color.new(color.gray, 50)
+    cell_text_5m = macci_5m > overbought_level ? "Short Zone" : macci_5m < oversold_level ? "Long Zone" : "Neutral"
+    table.cell(g_dashboard, 0, 3, tf3, bgcolor=cell_color_5m, text_color=color.white)
+    table.cell(g_dashboard, 1, 3, str.tostring(macci_5m, "0.0"), bgcolor=cell_color_5m, text_color=color.white)
+    table.cell(g_dashboard, 2, 3, cell_text_5m, bgcolor=cell_color_5m, text_color=color.white)
+    
+    // -- Table Header --
+    table.cell(g_dashboard, 0, 0, "Timeframe", bgcolor=color.new(color.gray, 20), text_color=color.white)
+    table.cell(g_dashboard, 1, 0, "MACCI", bgcolor=color.new(color.gray, 20), text_color=color.white)
+    table.cell(g_dashboard, 2, 0, "Status", bgcolor=color.new(color.gray, 20), text_color=color.white)
+
+// --- ALERTS ---
+if is_long_signal and not is_long_signal[1]
+    alert("MACCI Long Signal: Conditions met on " + tf1 + ", " + tf2 + ", " + tf3 + ". Look for LONG entries.", alert.freq_once_per_bar)
+
+if is_short_signal and not is_short_signal[1]
+    alert("MACCI Short Signal: Conditions met on " + tf1 + ", " + tf2 + ", " + tf3 + ". Look for SHORT entries.", alert.freq_once_per_bar)
