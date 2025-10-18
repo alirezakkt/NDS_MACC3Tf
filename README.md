@@ -11,3 +11,7 @@ Moving Average on CCI: Based on the selected moving average type (SMA, EMA, WMA)
 Buy Signal (Long): A buy signal is triggered when all three timeframes are simultaneously in the oversold zone. This condition indicates a potential price reversal upwards.
 
 Sell Signal (Short): A sell signal is triggered when all three timeframes are simultaneously in the overbought zone. This condition indicates a potential price reversal downwards.
+Detect good zone for Streng Reaction
+![befor](https://github.com/user-attachments/assets/f404ee48-c1c0-478f-a88a-bbc6486a0f42)
+ and after that
+ ![after](https://github.com/user-attachments/assets/948950a8-6b5e-44b1-be1c-333ce6664218)
