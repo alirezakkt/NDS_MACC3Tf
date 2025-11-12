@@ -10,18 +10,6 @@ cci_length = input.int(20, "CCI Length", minval=1, group=g_indicator)
 ma_length = input.int(10, "MA of CCI Length", minval=1, group=g_indicator)
 
 g_rules = "Strategy Rules & Timeframes"
-overbought_level = input.int(120, "Overbought Level (>)", group=g_rules)
-oversold_level = input.int(-120, "Oversold Level (<)", group=g_rules)
-tf1 = input.timeframe("1", "Timeframe 1", group=g_rules, inline="tf_row1")
-tf2 = input.timeframe("3", "Timeframe 2", group=g_rules, inline="tf_row1")
-tf3 = input.timeframe("5", "Timeframe 3", group=g_rules, inline="tf_row1")
-
-g_display = "Display Settings"
-show_dashboard = input.bool(true, "Show Dashboard", group=g_display)
-show_signals = input.bool(true, "Show Buy/Sell Signals", group=g_display, inline="sig_row1")
-show_bgcolor = input.bool(true, "Show Background Color", group=g_display, inline="sig_row1")
-long_color = input.color(color.new(color.green, 80), "Long Color", group=g_display, inline="clr_row1")
-short_color = input.color(color.new(color.red, 80), "Short Color", group=g_display, inline="clr_row1")
 
 // --- CORE CALCULATION & MULTI-TIMEFRAME LOGIC ---
 // The MACCI calculation is now directly inside the request.security calls to avoid '=>' functions.
@@ -35,24 +23,13 @@ macci_1m_base = switch ma_type
 macci_1m = request.security(syminfo.tickerid, tf1, macci_1m_base)
 
 // Timeframe 2
-cci_val_3m = ta.cci(close, cci_length)
-macci_3m_base = switch ma_type
-    "SMA" => ta.sma(cci_val_3m, ma_length)
-    "EMA" => ta.ema(cci_val_3m, ma_length)
-    "WMA" => ta.wma(cci_val_3m, ma_length)
 macci_3m = request.security(syminfo.tickerid, tf2, macci_3m_base)
 
 // Timeframe 3
-cci_val_5m = ta.cci(close, cci_length)
-macci_5m_base = switch ma_type
-    "SMA" => ta.sma(cci_val_5m, ma_length)
-    "EMA" => ta.ema(cci_val_5m, ma_length)
-    "WMA" => ta.wma(cci_val_5m, ma_length)
+
 macci_5m = request.security(syminfo.tickerid, tf3, macci_5m_base)
 
 // --- STRATEGY CONDITIONS ---
-is_long_signal = macci_1m < oversold_level and macci_3m < oversold_level and macci_5m < oversold_level
-is_short_signal = macci_1m > overbought_level and macci_3m > overbought_level and macci_5m > overbought_level
 
 // --- VISUAL SIGNALS ON CHART ---
 if show_signals
